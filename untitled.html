@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سێنتراڵی کڕین و کۆدەکان</title>
+    
+    <!-- سکریپتەکانی Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 31, 48, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-blue: #38bdf8;
+            --btn-grad: linear-gradient(135deg, #2563eb, #1d4ed8);
+            --btn-hover: linear-gradient(135deg, #1d4ed8, #1e40af);
+            --success-color: #10b981;
+            --error-color: #f43f5e;
+            --text-main: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            background: radial-gradient(circle at top, #1e1b4b 0%, var(--bg-color) 80%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 25px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 28px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .main-title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 25px;
+            color: var(--accent-blue);
+            font-weight: 800;
+        }
+
+        .card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            margin: 0 0 14px 0;
+            color: var(--text-main);
+            font-size: 17px;
+            text-align: center;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid #334155;
+            background-color: rgba(15, 23, 42, 0.8);
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+            margin-bottom: 12px;
+        }
+
+        .input-box:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .btn {
+            width: 100%;
+            background: var(--btn-grad);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn:hover {
+            background: var(--btn-hover);
+            transform: translateY(-2px);
+        }
+
+        .message {
+            margin-top: 14px;
+            font-weight: 600;
+            font-size: 15px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .message.show { display: block; }
+        .success { color: var(--success-color); background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .error { color: var(--error-color); background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="main-title">کڕین و بەدەستهێنانی دیارییەکان</div>
+
+    <!-- بەشی کڕینی فیلم -->
+    <div class="card">
+        <h3>کڕینی فیلم</h3>
+        <input type="text" id="movieCodeInput" class="input-box" placeholder="کۆدەکە بنووسە">
+        <button class="btn" onclick="buyMovie()">کڕینی فیلم</button>
+        <div id="movieMsg" class="message"></div>
+    </div>
+
+    <!-- بەشی کۆدی یەکەم -->
+    <div class="card">
+        <h3>کۆدی یەکەم بدۆزەوە بۆ بەدەستهێنانی پێنج دەفتەر</h3>
+        <input type="text" id="code1Input" class="input-box" placeholder="کۆدەکە لێرە بنووسە">
+        <button class="btn" onclick="checkCode1()">پشکنین</button>
+        <div id="msg1" class="message"></div>
+    </div>
+
+    <!-- بەشی کۆدی دووەم -->
+    <div class="card">
+        <h3>کۆدی دووەم بنووسە بۆ بەدەستهێنانی سەدا پێنجا (50%) داشکاندن لە DBC</h3>
+        <input type="text" id="code2Input" class="input-box" placeholder="کۆدەکە لێرە بنووسە">
+        <button class="btn" onclick="checkCode2()">پشکنین</button>
+        <div id="msg2" class="message"></div>
+    </div>
+</div>
+
+<script>
+    // 🔥 Firebase Config ـی تایبەت بە خۆت
+    const firebaseConfig = {
+        apiKey: "AIzaSyBOkQ3BOGpFnVuYo1664QvsOh1FO36VvW4",
+        authDomain: "mybfj-6b83d.firebaseapp.com",
+        databaseURL: "https://mybfj-6b83d-default-rtdb.firebaseio.com",
+        projectId: "mybfj-6b83d",
+        storageBucket: "mybfj-6b83d.firebasestorage.app",
+        messagingSenderId: "534313885128",
+        appId: "1:534313885128:web:2ecb89d1443256839a34fd"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // دروستکردنی ئایدی جێگیر بۆ ئامێری بەکارهێنەر
+    function getDeviceId() {
+        let deviceID = localStorage.getItem('kmb_stable_device_id');
+        if (!deviceID) {
+            deviceID = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('kmb_stable_device_id', deviceID);
+        }
+        return deviceID;
+    }
+
+    const deviceID = getDeviceId();
+
+    window.onload = function() {
+        // ۱. خوێندنەوە لە LocalStorage
+        if (localStorage.getItem('movieBought') === 'true') {
+            showSuccess('movieMsg', 'کاتژمێر 3:00am لە تیکتۆکی @aviar848 بۆت دەنێردرێت');
+            disableSection('movieCodeInput');
+        }
+
+        if (localStorage.getItem('code1Found') === 'true') {
+            showSuccess('msg1', 'پیرۆزە! ئەم کۆدەت بەدەستهێناوە.');
+            disableSection('code1Input');
+        }
+
+        const savedCode2 = localStorage.getItem('code2Found');
+        if (savedCode2) {
+            showSuccess('msg2', 'پیرۆزە! 50% داشکاندنەکەت بەدەستهێنا لە DBC.');
+            disableSection('code2Input', savedCode2);
+        }
+
+        // ۲. هاودەمکردنەوە بەپێی ئایدی ئامێری بەکارهێنەر
+        db.ref('users/' + deviceID).once('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            if (data.movieBought) {
+                localStorage.setItem('movieBought', 'true');
+                showSuccess('movieMsg', 'کاتژمێر 3:00am لە تیکتۆکی @aviar848 بۆت دەنێردرێت');
+                disableSection('movieCodeInput');
+            }
+            if (data.code1Found) {
+                localStorage.setItem('code1Found', 'true');
+                showSuccess('msg1', 'پیرۆزە! ئەم کۆدەت بەدەستهێناوە.');
+                disableSection('code1Input');
+            }
+            if (data.code2Found) {
+                localStorage.setItem('code2Found', data.code2Found);
+                showSuccess('msg2', 'پیرۆزە! 50% داشکاندنەکەت بەدەستهێنا لە DBC.');
+                disableSection('code2Input', data.code2Found);
+            }
+        });
+    };
+
+    function buyMovie() {
+        const code = document.getElementById('movieCodeInput').value.trim();
+        if (code === '9375') {
+            localStorage.setItem('movieBought', 'true');
+            db.ref('users/' + deviceID + '/movieBought').set(true);
+            showSuccess('movieMsg', 'کاتژمێر 3:00am لە تیکتۆکی @aviar848 بۆت دەنێردرێت');
+            disableSection('movieCodeInput');
+        } else {
+            showError('movieMsg', 'کۆدەکە هەڵەیە، تکایە کۆدی ڕاست بنووسە.');
+        }
+    }
+
+    function checkCode1() {
+        const code = document.getElementById('code1Input').value.trim();
+        if (code === '5780') {
+            localStorage.setItem('code1Found', 'true');
+            db.ref('users/' + deviceID + '/code1Found').set(true);
+            showSuccess('msg1', 'پیرۆزە! ئەم کۆدەت بەدەستهێناوە.');
+            disableSection('code1Input');
+        } else {
+            showError('msg1', 'کۆدەکە هەڵەیە، دووبارە هەوڵبدەرەوە.');
+        }
+    }
+
+    function checkCode2() {
+        const code = document.getElementById('code2Input').value.trim();
+        if (code !== '') {
+            localStorage.setItem('code2Found', code);
+            db.ref('users/' + deviceID + '/code2Found').set(code);
+            showSuccess('msg2', 'پیرۆزە! 50% داشکاندنەکەت بەدەستهێنا لە DBC.');
+            disableSection('code2Input', code);
+        } else {
+            showError('msg2', 'تکایە کۆدێک بنووسە.');
+        }
+    }
+
+    function showSuccess(elementId, text) {
+        const msg = document.getElementById(elementId);
+        msg.innerText = text;
+        msg.className = 'message success show';
+    }
+
+    function showError(elementId, text) {
+        const msg = document.getElementById(elementId);
+        msg.innerText = text;
+        msg.className = 'message error show';
+    }
+
+    function disableSection(inputId, customValue = 'تۆمارکراوە ✓') {
+        const input = document.getElementById(inputId);
+        input.value = customValue;
+        input.disabled = true;
+        const btn = input.nextElementSibling;
+        if (btn && btn.tagName === 'BUTTON') {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
+    }
+</script>
+
+</body>
+</html>
